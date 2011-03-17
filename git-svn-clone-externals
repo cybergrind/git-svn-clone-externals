@@ -104,6 +104,31 @@ do
 
     [ -z "${remote_url}" ] && continue
 
+    #if have relative external adress - handle it correctly
+    if  echo ${remote_url} | grep \^
+    then
+        repository_root="$(git svn info | grep 'Repository Root' | cut -d ' ' -f 3-)"
+        remote_url_new=${repository_root}"/$(echo ${remote_url} | cut -d ^ -f 2-)"
+        #test last character, if slash - remove it
+        if [ ${local_directory#${local_directory%?}} == / ]; then
+            #remove last character
+            local_directory=${local_directory%?}
+        fi
+        prefix_dir="$(echo ${local_directory} | cut -d ^ -f 1)"
+        local_directory_new="$(echo ${local_directory} | tr "/" "\n" | tail -n 1)"
+        
+        #if trunk - get name of repository
+        if [ ${local_directory_new} == trunk ]; then
+            local_directory_new="$(echo ${local_directory} | tr "/" "\n" | tail -n 2 | head -n 1 )"
+        fi
+        if [ -n ${prefix_dir} ]; then
+            local_directory_new=${prefix_dir}${local_directory_new}
+        fi
+        echo REMOTE NEW: ${remote_url_new} LOCAL NEW: ${local_directory_new}
+        remote_url=${remote_url_new}
+        local_directory=${local_directory_new}
+    fi
+
 	export local_directory revision remote_url
 
 	echo "$local_directory -> $remote_url"
